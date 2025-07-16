@@ -102,7 +102,8 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
       try {
         const response = await axios.get(`/api/chat/session/${chatSession.session_id}/messages`);
         if (response.data.success) {
-          setMessages(response.data.data);
+          const messagesData = response.data.data;
+          setMessages(Array.isArray(messagesData) ? messagesData : []);
         }
       } catch (error) {
         console.error('Error polling messages:', error);

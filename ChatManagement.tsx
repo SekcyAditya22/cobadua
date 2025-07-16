@@ -89,9 +89,11 @@ export default function ChatManagement() {
   const fetchSessions = async () => {
     try {
       const response = await axios.get('/admin/chat/api/sessions');
-      setSessions(response.data.data.data);
+      const sessionsData = response.data?.data?.data;
+      setSessions(Array.isArray(sessionsData) ? sessionsData : []);
     } catch (error) {
       console.error('Error fetching sessions:', error);
+      setSessions([]);
     }
   };
 
@@ -109,9 +111,11 @@ export default function ChatManagement() {
   const fetchMessages = async (sessionId: string) => {
     try {
       const response = await axios.get(`/admin/chat/api/sessions/${sessionId}/messages`);
-      setMessages(response.data.data.messages.data);
+      const messagesData = response.data?.data?.messages?.data;
+      setMessages(Array.isArray(messagesData) ? messagesData : []);
     } catch (error) {
       console.error('Error fetching messages:', error);
+      setMessages([]);
     }
   };
 
