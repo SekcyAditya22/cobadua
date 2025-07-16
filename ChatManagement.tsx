@@ -81,7 +81,7 @@ export default function ChatManagement() {
       if (selectedSession) {
         fetchMessages(selectedSession.session_id);
       }
-    }, 5000); // Poll every 5 seconds
+    }, 10000); // Poll every 10 seconds
 
     return () => clearInterval(interval);
   }, [selectedSession]);

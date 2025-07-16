@@ -110,8 +110,8 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
       }
     };
 
-    // Poll every 3 seconds
-    const interval = setInterval(pollMessages, 3000);
+    // Poll every 5 seconds
+    const interval = setInterval(pollMessages, 5000);
 
     return () => clearInterval(interval);
   }, [chatSession]);
