@@ -94,6 +94,27 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
     enabled: !!chatSession,
   });
 
+  // Polling fallback for messages
+  useEffect(() => {
+    if (!chatSession) return;
+
+    const pollMessages = async () => {
+      try {
+        const response = await axios.get(`/api/chat/session/${chatSession.session_id}/messages`);
+        if (response.data.success) {
+          setMessages(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error polling messages:', error);
+      }
+    };
+
+    // Poll every 3 seconds
+    const interval = setInterval(pollMessages, 3000);
+
+    return () => clearInterval(interval);
+  }, [chatSession]);
+
   const checkExistingSession = async () => {
     try {
       const response = await axios.get('/api/chat/session-from-cookie');
