@@ -148,6 +148,8 @@ export default function ChatManagement() {
     setNewMessage('');
 
     try {
+      console.log('Admin sending message:', { session_id: selectedSession.session_id, message: messageText });
+
       const response = await axios.post('/admin/chat/api/send-message', {
         session_id: selectedSession.session_id,
         message: messageText,
@@ -155,11 +157,30 @@ export default function ChatManagement() {
       });
 
       if (response.data.success) {
+        console.log('Admin message sent successfully:', response.data.data);
         // Add message to local state for immediate feedback
         setMessages(prev => [...prev, response.data.data]);
+      } else {
+        throw new Error(response.data.message || 'Failed to send message');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
+      setNewMessage(messageText); // Restore message text on error
+
+      let errorMessage = 'Gagal mengirim pesan. Silakan coba lagi.';
+
+      if (error.response?.status === 404) {
+        errorMessage = 'Sesi chat tidak ditemukan.';
+        // Refresh sessions list
+        fetchSessions();
+      } else if (error.response?.status === 419) {
+        errorMessage = 'Token CSRF tidak valid. Silakan refresh halaman.';
+        window.location.reload();
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Terjadi kesalahan server. Silakan coba lagi nanti.';
+      }
+
+      alert(errorMessage);
     }
   };
 

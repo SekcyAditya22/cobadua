@@ -72,6 +72,11 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Check for existing session on component mount
+  useEffect(() => {
+    checkExistingSession();
+  }, []);
+
   // Pusher integration - handle realtime messages
   usePusher({
     channelName: chatSession ? `chat-session.${chatSession.session_id}` : '',
@@ -116,9 +121,14 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
             return prev;
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         if (isActive) {
           console.error('Error polling messages:', error);
+          // If session is invalid, check for existing session again
+          if (error.response?.status === 404) {
+            console.log('Session not found, checking for existing session...');
+            checkExistingSession();
+          }
         }
       }
     };
@@ -137,16 +147,24 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
 
   const checkExistingSession = async () => {
     try {
+      console.log('Checking existing session...');
       const response = await axios.get('/api/chat/session-from-cookie');
-      if (response.data.success) {
+      if (response.data.success && response.data.data) {
+        console.log('Existing session found:', response.data.data);
         setChatSession(response.data.data);
         setMessages(response.data.data.messages || []);
         setShowStartForm(false);
+        return true;
       }
     } catch (error) {
-      // No existing session, show start form
+      console.log('No existing session found:', error);
+      // Clear any invalid session data
+      setChatSession(null);
+      setMessages([]);
       setShowStartForm(true);
+      return false;
     }
+    return false;
   };
 
   const startChatSession = async (e: React.FormEvent) => {
@@ -154,14 +172,30 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
     setIsLoading(true);
 
     try {
+      console.log('Starting new chat session with data:', formData);
       const response = await axios.post('/api/chat/start-session', formData);
-      if (response.data.success) {
+      if (response.data.success && response.data.data) {
+        console.log('New chat session created:', response.data.data);
         setChatSession(response.data.data.chat_session);
         setShowStartForm(false);
         setMessages([]);
+
+        // Send initial welcome message from admin
+        setTimeout(async () => {
+          try {
+            await axios.post('/api/chat/send-message', {
+              session_id: response.data.data.chat_session.session_id,
+              message: `Halo ${formData.name}! Selamat datang di layanan chat kami. Ada yang bisa kami bantu?`,
+              sender_type: 'admin',
+            });
+          } catch (welcomeError) {
+            console.error('Error sending welcome message:', welcomeError);
+          }
+        }, 1000);
       }
     } catch (error) {
       console.error('Error starting chat session:', error);
+      alert('Gagal memulai sesi chat. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
     }
@@ -176,6 +210,8 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
     setIsSending(true);
 
     try {
+      console.log('Sending message:', { session_id: chatSession.session_id, message: messageText });
+
       const response = await axios.post('/api/chat/send-message', {
         session_id: chatSession.session_id,
         message: messageText,
@@ -183,13 +219,31 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
       });
 
       if (response.data.success) {
+        console.log('Message sent successfully:', response.data.data);
         // Add message to local state for immediate feedback
         setMessages(prev => [...prev, response.data.data]);
+      } else {
+        throw new Error(response.data.message || 'Failed to send message');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
       setNewMessage(messageText); // Restore message text on error
-      alert('Gagal mengirim pesan. Silakan coba lagi.');
+
+      let errorMessage = 'Gagal mengirim pesan. Silakan coba lagi.';
+
+      if (error.response?.status === 404) {
+        errorMessage = 'Sesi chat tidak ditemukan. Silakan mulai chat baru.';
+        // Reset session if not found
+        setChatSession(null);
+        setMessages([]);
+        setShowStartForm(true);
+      } else if (error.response?.status === 419) {
+        errorMessage = 'Sesi telah berakhir. Silakan refresh halaman dan coba lagi.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Terjadi kesalahan server. Silakan coba lagi nanti.';
+      }
+
+      alert(errorMessage);
     } finally {
       setIsSending(false);
     }
