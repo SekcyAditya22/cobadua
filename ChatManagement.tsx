@@ -74,6 +74,18 @@ export default function ChatManagement() {
     fetchStats();
   }, []);
 
+  // Polling for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchSessions();
+      if (selectedSession) {
+        fetchMessages(selectedSession.session_id);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [selectedSession]);
+
   const fetchSessions = async () => {
     try {
       const response = await axios.get('/admin/chat/api/sessions');
@@ -94,14 +106,18 @@ export default function ChatManagement() {
     }
   };
 
-  const selectSession = async (session: ChatSession) => {
-    setSelectedSession(session);
+  const fetchMessages = async (sessionId: string) => {
     try {
-      const response = await axios.get(`/admin/chat/api/sessions/${session.session_id}/messages`);
+      const response = await axios.get(`/admin/chat/api/sessions/${sessionId}/messages`);
       setMessages(response.data.data.messages.data);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
+  };
+
+  const selectSession = async (session: ChatSession) => {
+    setSelectedSession(session);
+    await fetchMessages(session.session_id);
   };
 
   const sendMessage = async (e: React.FormEvent) => {
