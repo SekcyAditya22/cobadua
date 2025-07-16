@@ -76,15 +76,31 @@ export default function ChatManagement() {
 
   // Polling for real-time updates
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchSessions();
-      if (selectedSession) {
-        fetchMessages(selectedSession.session_id);
-      }
-    }, 10000); // Poll every 10 seconds
+    let isActive = true;
 
-    return () => clearInterval(interval);
-  }, [selectedSession]);
+    const pollUpdates = async () => {
+      if (!isActive) return;
+
+      try {
+        await fetchSessions();
+        if (selectedSession && isActive) {
+          await fetchMessages(selectedSession.session_id);
+        }
+      } catch (error) {
+        if (isActive) {
+          console.error('Error polling updates:', error);
+        }
+      }
+    };
+
+    // Poll every 15 seconds (reduced frequency)
+    const interval = setInterval(pollUpdates, 15000);
+
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
+  }, [selectedSession?.session_id]); // Only depend on session_id
 
   const fetchSessions = async () => {
     try {

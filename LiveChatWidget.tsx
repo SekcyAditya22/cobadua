@@ -98,23 +98,42 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
   useEffect(() => {
     if (!chatSession) return;
 
+    let isActive = true;
+
     const pollMessages = async () => {
+      if (!isActive) return;
+
       try {
         const response = await axios.get(`/api/chat/session/${chatSession.session_id}/messages`);
-        if (response.data.success) {
+        if (response.data.success && isActive) {
           const messagesData = response.data.data;
-          setMessages(Array.isArray(messagesData) ? messagesData : []);
+          setMessages(prev => {
+            const newMessages = Array.isArray(messagesData) ? messagesData : [];
+            // Only update if messages actually changed
+            if (JSON.stringify(prev) !== JSON.stringify(newMessages)) {
+              return newMessages;
+            }
+            return prev;
+          });
         }
       } catch (error) {
-        console.error('Error polling messages:', error);
+        if (isActive) {
+          console.error('Error polling messages:', error);
+        }
       }
     };
 
-    // Poll every 5 seconds
-    const interval = setInterval(pollMessages, 5000);
+    // Initial load
+    pollMessages();
 
-    return () => clearInterval(interval);
-  }, [chatSession]);
+    // Poll every 8 seconds (reduced frequency)
+    const interval = setInterval(pollMessages, 8000);
+
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
+  }, [chatSession?.session_id]); // Only depend on session_id, not the whole object
 
   const checkExistingSession = async () => {
     try {
@@ -169,6 +188,8 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      setNewMessage(messageText); // Restore message text on error
+      alert('Gagal mengirim pesan. Silakan coba lagi.');
     } finally {
       setIsSending(false);
     }
