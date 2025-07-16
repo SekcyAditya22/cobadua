@@ -240,7 +240,7 @@ export default function ChatManagement() {
                     Tidak ada chat session
                   </div>
                 ) : (
-                  sessions.map((session) => (
+                  Array.isArray(sessions) ? sessions.map((session) => (
                     <div
                       key={session.id}
                       onClick={() => selectSession(session)}
@@ -272,7 +272,7 @@ export default function ChatManagement() {
                         </div>
                       </div>
                     </div>
-                  ))
+                  )) : null
                 )}
               </div>
             </div>
@@ -297,7 +297,7 @@ export default function ChatManagement() {
 
                   {/* Messages */}
                   <div className="h-96 overflow-y-auto p-4 space-y-4">
-                    {messages.map((message) => (
+                    {Array.isArray(messages) ? messages.map((message) => (
                       <div
                         key={message.id}
                         className={`flex ${message.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
@@ -317,7 +317,7 @@ export default function ChatManagement() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )) : null}
                   </div>
 
                   {/* Message Input */}

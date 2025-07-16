@@ -358,7 +358,7 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
                       </p>
                     </div>
                   ) : (
-                    messages.map((message) => (
+                    Array.isArray(messages) ? messages.map((message) => (
                       <div
                         key={message.id}
                         className={`flex ${message.sender_type === 'guest' ? 'justify-end' : 'justify-start'}`}
@@ -392,7 +392,7 @@ export const LiveChatWidget = forwardRef<LiveChatWidgetRef>((props, ref) => {
                           </div>
                         </div>
                       </div>
-                    ))
+                    )) : null
                   )}
 
                   {/* Typing indicator */}
